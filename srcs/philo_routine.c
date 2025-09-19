@@ -5,80 +5,94 @@
 /*                                                    +:+ +:+         +:+     */
 /*   By: atoepper <atoepper@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2024/05/27 14:38:21 by atoepper          #+#    #+#             */
-/*   Updated: 2024/09/21 14:32:01 by atoepper         ###   ########.fr       */
+/*   Created: 2024/10/22 14:29:40 by atoepper          #+#    #+#             */
+/*   Updated: 2024/10/23 10:35:51 by atoepper         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
-#include "../incl/philo.h"
+#include "philo.h"
 
-void	grab_forks(t_phil *philo)
+int	is_end_of_sim(t_monitor *monit)
 {
-	pthread_mutex_lock(philo->lfork);
-	philo_write("has taken a fork", philo, get_time ());
-	pthread_mutex_lock(philo->rfork);
-	philo_write("has taken a fork", philo, get_time ());
-}
-
-void	philo_eat(t_phil *philo)
-{
-	t_monitor	*m;
-
-	m = philo->monit;
-	philo_write("is eating", philo, get_time());
-	pthread_mutex_lock(&philo->monit->last_meal_lock);
-	philo->last_meal = get_time ();
-	pthread_mutex_unlock(&philo->monit->last_meal_lock);
-	ft_sleep(m->time_to_eat, m);
-	pthread_mutex_unlock(philo->lfork);
-	pthread_mutex_unlock(philo->rfork);
-	philo->finished_meals++;
-	if (m->meals_to_eat != -1)
+	pthread_mutex_lock(&monit->m_endflag);
+	if (monit->end_flag == TRUE)
 	{
-		if (philo->finished_meals == m->meals_to_eat)
-		{
-			pthread_mutex_lock(&m->meal_lock);
-			philo->monit->finished++;
-			pthread_mutex_unlock(&m->meal_lock);
-		}
+		pthread_mutex_unlock(&monit->m_endflag);
+		return (TRUE);
 	}
+	return (FALSE);
 }
 
-void	philo_sleep(t_phil *philo)
+void	*philo_even(void *philoptr)
 {
-	philo_write("is sleeping", philo, get_time ());
-	ft_sleep(philo->monit->time_to_sleep, philo->monit);
-}
+	t_philo	*philo;
 
-void	philo_think(t_phil *philo)
-{
-	philo_write("is thinking", philo, get_time());
-	if (!check_end_flag(philo->monit))
-		grab_forks(philo);
-}
-
-void	*philo_routine(void *data)
-{
-	t_phil		*philo;
-	t_monitor	*m;
-
-	philo = (t_phil *)data;
-	m = philo->monit;
-	if (m->phil_num == 1)
+	philo = (t_philo *)philoptr;
+	pthread_mutex_lock(&philo->monit->m_start_time);
+	pthread_mutex_unlock(&philo->monit->m_start_time);
+	while (1)
 	{
-		philo_write("has taken a fork", philo, get_time ());
-		ft_sleep(m->time_to_die, m);
-		return (NULL);
-	}
-	if (philo->id % 2 == 0)
-		usleep(1500);
-	while (!check_end_flag(m))
-	{
+		if (is_end_of_sim(philo->monit) == TRUE)
+			return (NULL);
+		pthread_mutex_unlock(&philo->monit->m_endflag);
+		take_lfork(philo);
+		take_rfork(philo);
+		philo_eat(philo);
+		philo_sleep(philo);
 		philo_think(philo);
-		if (!check_end_flag(m))
-			philo_eat(philo);
-		if (!check_end_flag(m))
-			philo_sleep(philo);
 	}
 	return (NULL);
+}
+
+void	*philo_odd(void *philoptr)
+{
+	t_philo	*philo;
+
+	philo = (t_philo *)philoptr;
+	pthread_mutex_lock(&philo->monit->m_start_time);
+	pthread_mutex_unlock(&philo->monit->m_start_time);
+	usleep(1000);
+	while (1)
+	{
+		if (is_end_of_sim(philo->monit) == TRUE)
+			return (NULL);
+		pthread_mutex_unlock(&philo->monit->m_endflag);
+		take_rfork(philo);
+		if (philo->monit->phil_num == 1)
+			ft_one_philo(philo);
+		else
+		{
+			take_lfork(philo);
+			philo_eat(philo);
+			philo_sleep(philo);
+			philo_think(philo);
+			usleep(300);
+		}
+	}
+	return (NULL);
+}
+
+void	philo_write(t_philo *philo, size_t philo_id, char *msg)
+{
+	size_t	time_stamp;
+
+	pthread_mutex_lock(&philo->monit->m_write);
+	if (philo->monit->end_flag == TRUE)
+	{
+		pthread_mutex_unlock(&philo->monit->m_write);
+		return ;
+	}
+	time_stamp = get_cur_time() - philo->monit->start_time;
+	printf("%zu %zu %s\n", time_stamp, philo_id, msg);
+	pthread_mutex_unlock(&philo->monit->m_write);
+}
+
+void	ft_one_philo(t_philo *philo)
+{
+	size_t	start_time;
+
+	start_time = get_cur_time ();
+	while ((get_cur_time () - start_time) <= philo->monit->time_to_die)
+		usleep(50);
+	pthread_mutex_unlock(philo->monit->forks[philo->lfork]);
 }

@@ -1,30 +1,29 @@
 /* ************************************************************************** */
 /*                                                                            */
 /*                                                        :::      ::::::::   */
-/*   philo.c                                            :+:      :+:    :+:   */
+/*   main.c                                             :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
 /*   By: atoepper <atoepper@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2024/05/14 14:55:57 by atoepper          #+#    #+#             */
-/*   Updated: 2024/09/21 11:46:08 by atoepper         ###   ########.fr       */
+/*   Created: 2024/10/22 10:51:48 by atoepper          #+#    #+#             */
+/*   Updated: 2024/10/22 15:52:24 by atoepper         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
-#include "../incl/philo.h"
+#include "philo.h"
 
 int	main(int argc, char **argv)
 {
-	t_monitor		monitor;
+	t_monitor	monit;
+	t_philo		*philo;
 
-	if (parse_args(argc, argv) == -1)
-		return (1);
-	if (init_monitor(&monitor, argc, argv) == -1)
-		return (destroy_mutexes(&monitor), 1);
-	if (init_forks(monitor.forks, monitor.phil_num) == -1)
-		return (destroy_mutexes(&monitor), 1);
-	init_philo(&monitor);
-	if (start_monitor(&monitor) == -1)
-		return (destroy_mutexes(&monitor), 1);
-	destroy_mutexes(&monitor);
-	return (0);
+	if (parse_arguments(argc, argv) == FAILURE)
+		return (EXIT_FAILURE);
+	philo = NULL;
+	if (init_simulation(&monit, &philo, argc, argv) == FAILURE)
+		return (EXIT_FAILURE);
+	if (create_philo_threads(&monit, philo) == SUCCESS)
+		start_simulation(philo, argc);
+	free_resources(&monit, &philo);
+	return (EXIT_SUCCESS);
 }

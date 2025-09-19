@@ -5,99 +5,117 @@
 /*                                                    +:+ +:+         +:+     */
 /*   By: atoepper <atoepper@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2024/05/14 14:53:45 by atoepper          #+#    #+#             */
-/*   Updated: 2024/09/21 12:38:24 by atoepper         ###   ########.fr       */
+/*   Created: 2024/10/22 10:54:35 by atoepper          #+#    #+#             */
+/*   Updated: 2024/10/23 10:23:43 by atoepper         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #ifndef PHILO_H
 # define PHILO_H
 
-# include <unistd.h>
 # include <stdio.h>
-# include <stdlib.h>
-# include <pthread.h>
-# include <sys/time.h>
-# include <semaphore.h>
-# include <fcntl.h>
 # include <unistd.h>
-# include <sys/stat.h>
-# include <sys/wait.h>
-# include <signal.h>
+# include <limits.h>
+# include <pthread.h>
+# include <stdlib.h>
+# include <sys/time.h>
+# include <string.h>
+# include <stdbool.h>
 
-# define NC	"\e[0m"
-# define YELLOW	"\e[1;33m"
-# define BYELLOW	"\e[1;33m"
-# define RED	"\e[31m"
-# define GREEN	"\e[32m"
-
-# define USAGE_1 "Usage: <num_of_phil> <time_to_die>"
-# define USAGE_2 " <time_to_eat> <time_to_sleep> "
-# define USAGE_3 "[<number_of_times_each_philosopher_must_eat>]\n"
-
-# ifndef PHIL_MAX
-#  define PHIL_MAX 200
+# ifndef TRUE
+#  define TRUE 1
 # endif
+# ifndef FALSE
+#  define FALSE 0
+# endif
+# define SUCCESS 0
+# define FAILURE 1
+# define ERROR -1
+# define LOCK 1
+# define UNLOCK 0
 
-struct	s_monitor;
-
-typedef struct s_phil
+typedef enum e_err
 {
-	pthread_t			thread;
-	int					id;
-	int					finished_meals;
-	size_t				last_meal;
-	pthread_mutex_t		*lfork;
-	pthread_mutex_t		*rfork;
-	struct s_monitor	*monit;
-}	t_phil;
+	ARG_NUM,
+	ARG_RANGE,
+	MALLOC,
+	THREAD
+}	t_err;
 
 typedef struct s_monitor
 {
 	int				end_flag;
-	int				phil_num;
-	int				time_to_eat;
-	int				time_to_sleep;
+	size_t			phil_num;
 	size_t			time_to_die;
-	int				meals_to_eat;
-	int				finished;
+	size_t			time_to_eat;
+	size_t			time_to_sleep;
+	size_t			meals_to_eat;
 	size_t			start_time;
-	pthread_mutex_t	forks[250];
-	pthread_mutex_t	write_lock;
-	pthread_mutex_t	meal_lock;
-	pthread_mutex_t	last_meal_lock;
-	pthread_mutex_t	dead_lock;
-	t_phil			philo[250];
+	int				*fork_status;
+	pthread_t		**philo;
+	pthread_mutex_t	**forks;
+	pthread_mutex_t	m_write;
+	pthread_mutex_t	m_start_time;
+	pthread_mutex_t	m_endflag;
 }	t_monitor;
 
-/* philo_init */
-int		init_monitor(t_monitor *m, int argc, char **argv);
-void	init_philo(t_monitor *monit);
-int		init_forks(pthread_mutex_t *forks, int phil_num);
-void	destroy_mutexes(t_monitor *monit);
+typedef struct s_philo
+{
+	size_t			id;
+	size_t			last_meal;
+	int				rfork;
+	int				lfork;
+	int				finished_meals;
+	pthread_mutex_t	m_last_meal;
+	pthread_mutex_t	m_finished_meals;
+	t_monitor		*monit;
+}	t_philo;
 
-/* philo_utils */
-int		is_num(char *arg);
-int		parse_args(int argc, char **argv);
-int		ft_atoi(const char *str);
-void	philo_write(char *str, t_phil *phil, size_t time_stamp);
-int		check_end_flag(t_monitor *m);
+/* error.c */
+void	ft_print_error(t_err err_type);
 
-/* philo_time */
-size_t	get_time(void);
-void	ft_sleep(size_t millisec, t_monitor *m);
+/* free.c */
+void	destroy_all_mutex(t_monitor *monit);
+void	free_resources(t_monitor *monit, t_philo **philos);
 
-/* philo_routine */
-void	philo_eat(t_phil *philo);
-void	philo_sleep(t_phil *philo);
-void	philo_think(t_phil *philo);
-void	*philo_routine(void *data);
+/* init.c */
+int		init_simulation(t_monitor *monit, t_philo **philo,
+			int argc, char **argv);
+int		malloc_resources(t_monitor *monit, t_philo **philo);
+void	assign_args(t_monitor *monit, int argc, char **argv);
+void	init_resources(t_monitor *monit, t_philo *philo);
 
-/* threads */
-int		create_threads(t_monitor *m, void *(*philo_routine)(void *));
-int		join_threads(t_monitor *m);
+/* monitor.c */
+void	start_simulation(t_philo *philo, int argc);
+int		check_finished_meals(t_philo *philo);
+int		check_dead(t_philo *philo);
 
-/* philo_monitor */
-int		start_monitor(t_monitor *m);
+/* parse.c */
+int		parse_arguments(int argc, char **argv);
+size_t	ft_check_argtype(char *str);
+
+/* philo_routine.c */
+void	*philo_odd(void *philoptr);
+void	*philo_even(void *philoptr);
+void	philo_write(t_philo *philo, size_t philo_id, char *msg);
+int		is_end_of_sim(t_monitor *monit);
+void	ft_one_philo(t_philo *philo);
+
+/* philo_routine_2.c */
+void	take_lfork(t_philo *philo);
+void	take_rfork(t_philo *philo);
+void	philo_sleep(t_philo *philo);
+void	philo_eat(t_philo *philo);
+void	philo_think(t_philo *philo);
+
+/* threads.c */
+int		create_philo_threads(t_monitor *monitor, t_philo *philo);
+
+/* time.c */
+size_t	get_cur_time(void);
+
+/* utils.c */
+void	*ft_calloc(size_t size);
+int		is_digit(char *str);
 
 #endif

@@ -5,68 +5,57 @@
 #                                                     +:+ +:+         +:+      #
 #    By: atoepper <atoepper@student.42.fr>          +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
-#    Created: 2024/05/14 14:49:59 by atoepper          #+#    #+#              #
-#    Updated: 2024/06/04 12:59:56 by atoepper         ###   ########.fr        #
+#    Created: 2024/10/22 10:49:48 by atoepper          #+#    #+#              #
+#    Updated: 2025/09/19 14:24:45 by atoepper         ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
-### COMPILATION ###
-CC      = gcc -O2
-FLAGS  = -Wall -Wextra -Werror -g
+NAME = philo
 
-### EXECUTABLE ###
-NAME   = philo
+SRC_DIR = srcs
+INC_DIR = incl
+SRC =	main.c \
+		error.c \
+		free.c \
+		init.c \
+		monitor.c \
+		parse.c \
+		philo_routine.c \
+		philo_routine2.c \
+		threads.c \
+		time.c \
+		utils.c \
 
-### INCLUDES ###
-OBJ_PATH  = objs
-HEADER = incl
-SRC_PATH  = srcs
+SRC := $(patsubst %.c, $(SRC_DIR)/%.c, $(SRC))
 
-### SOURCE FILES ###
-SOURCES = philo.c \
-			philo_utils.c \
-			philo_time.c \
-			philo_init.c \
-			philo_monitor.c \
-			philo_routine.c \
-			philo_threads.c
+CC = cc
+CFLAGS = -Wall -Wextra -Werror
+CFLAGS += -g -fPIE 
+CFLAGS += -I$(INC_DIR)
 
-### OBJECTS ###
+OBJ_DIR = .obj
+OBJ = $(patsubst $(SRC_DIR)/%.c, $(OBJ_DIR)/%.o, $(SRC))
 
-SRCS = $(addprefix $(SRC_PATH)/,$(SOURCES))
-OBJS = $(addprefix $(OBJ_PATH)/,$(SOURCES:.c=.o))
+all : ${NAME}
 
-### COLORS ###
-NOC         = \033[0m
-RED         = \033[1;31m
-GREEN       = \033[1;32m
-BLUE        = \033[1;34m
-CYAN        = \033[1;36m
-WHITE       = \033[1;37m
+$(NAME) : $(OBJ)
+	@$(CC) $(CFLAGS) $(OBJ) -o $(NAME)
 
-### RULES ###
+$(OBJ_DIR)/%.o: $(SRC_DIR)/%.c
+	@mkdir -p $(dir $@)
+	@$(CC) $(CFLAGS) -c $< -o $@
 
-all: tmp $(NAME)
+clean :
+	rm -rf $(OBJ_DIR)
 
-$(NAME): $(OBJS)
-	$(CC) $(FLAGS) -o $@ $^
-	@echo "$(GREEN)Project successfully compiled"
+fclean : clean
+	rm -f ${NAME}
 
-tmp:
-	@mkdir -p objs
+re: fclean
+	$(MAKE) all
 
-$(OBJ_PATH)/%.o: $(SRC_PATH)/%.c $(HEADER)/$(NAME).h | tmp
-	@$(CC) $(FLAGS) -c -o $@ $<
-	@echo "$(BLUE)Creating object file -> $(WHITE)$(notdir $@)... $(RED)[Done]$(NOC)"
+v: $(NAME)
+	valgrind --leak-check=full --show-leak-kinds=all ./$(NAME)
 
-clean:
-	@rm -rf $(OBJ_PATH)
+.PHONY : all clean fclean re v 
 
-fclean:
-	@rm -rf $(OBJ_PATH)
-	@rm -f $(NAME)
-
-re: fclean 
-	@$(MAKE) all
-
-.PHONY: tmp, re, fclean, clean

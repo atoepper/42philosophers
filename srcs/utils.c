@@ -1,30 +1,28 @@
 /* ************************************************************************** */
 /*                                                                            */
 /*                                                        :::      ::::::::   */
-/*   philo_time.c                                       :+:      :+:    :+:   */
+/*   utils.c                                            :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
 /*   By: atoepper <atoepper@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2024/06/04 12:57:49 by atoepper          #+#    #+#             */
-/*   Updated: 2024/09/21 12:44:15 by atoepper         ###   ########.fr       */
+/*   Created: 2024/10/22 12:40:06 by atoepper          #+#    #+#             */
+/*   Updated: 2024/10/23 10:11:14 by atoepper         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
-#include "../incl/philo.h"
+#include "philo.h"
 
-size_t	get_time(void)
+void	*ft_calloc(size_t size)
 {
-	struct timeval	tv;
+	void	*p_mem;
 
-	gettimeofday(&tv, NULL);
-	return (tv.tv_sec * 1000 + tv.tv_usec / 1000);
+	p_mem = malloc(size);
+	if (p_mem != NULL)
+		memset(p_mem, 0, size);
+	return (p_mem);
 }
 
-void	ft_sleep(size_t millisec, t_monitor *m)
+int	is_digit(char *str)
 {
-	size_t	start_time;
-
-	start_time = get_time ();
-	while (!check_end_flag(m) && (get_time () - start_time) <= millisec)
-		usleep(50);
+	return ((*str >= '0') && (*str <= '9'));
 }
